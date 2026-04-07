@@ -486,7 +486,7 @@ function renderRecent(){
   strip.innerHTML=recent.map(r=>{
     const thumbFile=tm[r.species];
     const imgTag=thumbFile?'<img src="thumbs/'+thumbFile+'" alt="'+r.species+'">':'<div style="height:110px;background:#222;display:flex;align-items:center;justify-content:center;color:#555"><i class="fas fa-dove" style="font-size:2em"></i></div>';
-    return '<div class="recent-card" onclick="openLightbox(''+r.species+'')">'+imgTag+'<div class="info"><div class="name">'+r.species+'</div><div class="date">'+r.date+'</div></div></div>';
+    return '<div class="recent-card" data-lb="'+r.species.replace(/"/g,'&quot;')+'">'+imgTag+'<div class="info"><div class="name">'+r.species+'</div><div class="date">'+r.date+'</div></div></div>';
   }).join('');
 }
 
@@ -510,7 +510,7 @@ function renderGallery(){
   grid.innerHTML=list.map(s=>{
     const thumbFile=tm[s.name];
     if(!thumbFile)return '';
-    return '<div class="gallery-item" onclick="openLightbox(''+s.name.replace(/'/g,"\'")+'')" data-species="'+s.name.toLowerCase()+'"><img src="thumbs/'+thumbFile+'" alt="'+s.name+'" loading="lazy"><div class="overlay"><span>'+s.name+' ('+s.count+')</span></div></div>';
+    return '<div class="gallery-item" data-lb="'+s.name.replace(/"/g,'&quot;')+'" data-species="'+s.name.toLowerCase()+'"><img src="thumbs/'+thumbFile+'" alt="'+s.name+'" loading="lazy"><div class="overlay"><span>'+s.name+' ('+s.count+')</span></div></div>';
   }).join('');
 }
 
@@ -522,7 +522,7 @@ function renderSpeciesList(){
   grid.innerHTML=list.map(s=>{
     const thumbFile=tm[s.name];
     const imgTag=thumbFile?'<img src="thumbs/'+thumbFile+'" alt="'+s.name+'">':'<div style="width:70px;height:70px;background:#1a1a1a;display:flex;align-items:center;justify-content:center"><i class="fas fa-dove" style="color:#333"></i></div>';
-    return '<div class="species-card" onclick="openLightbox(''+s.name.replace(/'/g,"\'")+'')" data-species="'+s.name.toLowerCase()+'">'+imgTag+'<div class="info"><div class="name">'+s.name+'</div><div class="meta">'+s.count+' photo'+(s.count>1?'s':'')+'</div></div><span class="count">'+s.count+'</span></div>';
+    return '<div class="species-card" data-lb="'+s.name.replace(/"/g,'&quot;')+'" data-species="'+s.name.toLowerCase()+'">'+imgTag+'<div class="info"><div class="name">'+s.name+'</div><div class="meta">'+s.count+' photo'+(s.count>1?'s':'')+'</div></div><span class="count">'+s.count+'</span></div>';
   }).join('');
 }
 
@@ -607,6 +607,8 @@ function initMap(){
 }
 
 // ===== LIGHTBOX =====
+// Event delegation for lightbox clicks
+document.addEventListener('click',function(e){var el=e.target.closest('[data-lb]');if(el)openLightbox(el.dataset.lb);});
 function openLightbox(species){
   const tm=localData.thumb_map||{};
   const tf=tm[species];
@@ -661,9 +663,11 @@ function handleFiles(files){
   [...files].forEach(file=>{if(!file.type.startsWith('image/'))return;
     const reader=new FileReader();reader.onload=()=>{
       const div=document.createElement('div');div.style.cssText='display:inline-block;margin:10px;text-align:center;background:rgba(255,255,255,.03);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.06)';
-      div.innerHTML='<img src="'+reader.result+'" style="max-width:150px;max-height:150px;border-radius:8px"><br><input type="text" placeholder="Species name" style="margin-top:8px;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#eee;border-radius:8px;width:150px;font-family:Poppins" class="upload-species"><br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="addPhoto(this,''+file.name.replace(/'/g,"\'")+'')">Add</button>';
+      div.innerHTML='<img src="'+reader.result+'" style="max-width:150px;max-height:150px;border-radius:8px"><br><input type="text" placeholder="Species name" style="margin-top:8px;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#eee;border-radius:8px;width:150px;font-family:Poppins" class="upload-species"><br><button class="btn btn-primary btn-sm" style="margin-top:8px" data-addphoto="'+file.name.replace(/"/g,'&quot;')+'">Add</button>';
       prev.appendChild(div)};reader.readAsDataURL(file)});
 }
+// Event delegation for addPhoto buttons
+document.addEventListener('click',function(e){var el=e.target.closest('[data-addphoto]');if(el){addPhoto(el,el.dataset.addphoto);}});
 function addPhoto(btn,filename){
   const species=btn.parentElement.querySelector('.upload-species').value.trim();
   if(!species){showToast('Enter a species name');return}
