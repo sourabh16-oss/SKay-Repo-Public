@@ -620,60 +620,15 @@ function openLightbox(species){
 function closeLightbox(){document.getElementById('lightbox').classList.remove('show')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
 
-// ===== MANAGE / DELETE =====
-let selectedForDelete=new Set();
-function renderManageTable(){
-  const body=document.getElementById('manageBody');
-  body.innerHTML=localData.photo_log.map((d,i)=>{
-    const sc=d.status==='identified'?'status-identified':d.status==='skip'?'status-skip':'status-untagged';
-    return '<tr data-idx="'+i+'"><td><input type="checkbox" class="del-cb" data-idx="'+i+'"></td><td>'+d.filename+'</td><td>'+(d.species||'—')+'</td><td><span class="status-badge '+sc+'">'+d.status+'</span></td><td>'+(d.date?d.date.substring(0,10):'—')+'</td></tr>';
-  }).join('');
-  selectedForDelete.clear();updateDeleteCount();
-}
-document.addEventListener('change',e=>{
-  if(e.target.classList.contains('del-cb')){const i=parseInt(e.target.dataset.idx);if(e.target.checked)selectedForDelete.add(i);else selectedForDelete.delete(i);updateDeleteCount()}
-  if(e.target.id==='selectAll'){document.querySelectorAll('.del-cb').forEach(cb=>{cb.checked=e.target.checked;const i=parseInt(cb.dataset.idx);if(e.target.checked)selectedForDelete.add(i);else selectedForDelete.delete(i)});updateDeleteCount()}
-});
-function updateDeleteCount(){document.getElementById('deleteCount').textContent=selectedForDelete.size;document.getElementById('deleteSelected').disabled=selectedForDelete.size===0}
-document.getElementById('deleteSelected').addEventListener('click',()=>{document.getElementById('deleteMsg').textContent='Delete '+selectedForDelete.size+' selected entries? This cannot be undone.';document.getElementById('deleteModal').classList.add('show')});
-function closeDeleteModal(){document.getElementById('deleteModal').classList.remove('show')}
-document.getElementById('confirmDelete').addEventListener('click',()=>{
-  const indices=[...selectedForDelete].sort((a,b)=>b-a);
-  indices.forEach(i=>localData.photo_log.splice(i,1));
-  const rf=new Set(localData.photo_log.map(d=>d.filename));
-  localData.gps_data=(localData.gps_data||[]).filter(g=>rf.has(g.filename));
-  rebuildAllFromLog();renderAll();pushToFirestore();closeDeleteModal();showToast(indices.length+' entries deleted');
-});
+// ===== MANAGE / DELETE (disabled in public version) =====
+function renderManageTable(){}
 
-// ===== SEARCH =====
-document.getElementById('speciesSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.species-card').forEach(el=>{el.style.display=(el.dataset.species||'').includes(q)?'':'none'})});
-document.getElementById('gallerySearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.gallery-item').forEach(el=>{el.style.display=(el.dataset.species||'').includes(q)?'':'none'})});
-document.getElementById('logSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#logBody tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none'})});
-document.getElementById('manageSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#manageBody tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none'})});
-
-// ===== UPLOAD =====
-const uz=document.getElementById('uploadZone'),fi=document.getElementById('fileInput');
-uz.addEventListener('click',()=>fi.click());
-uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('dragover')});
-uz.addEventListener('dragleave',()=>uz.classList.remove('dragover'));
-uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('dragover');handleFiles(e.dataTransfer.files)});
-fi.addEventListener('change',e=>handleFiles(e.target.files));
-function handleFiles(files){
-  const prev=document.getElementById('uploadPreview');prev.innerHTML='';
-  [...files].forEach(file=>{if(!file.type.startsWith('image/'))return;
-    const reader=new FileReader();reader.onload=()=>{
-      const div=document.createElement('div');div.style.cssText='display:inline-block;margin:10px;text-align:center;background:rgba(255,255,255,.03);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.06)';
-      div.innerHTML='<img src="'+reader.result+'" style="max-width:150px;max-height:150px;border-radius:8px"><br><input type="text" placeholder="Species name" style="margin-top:8px;padding:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#eee;border-radius:8px;width:150px;font-family:Poppins" class="upload-species"><br><button class="btn btn-primary btn-sm" style="margin-top:8px" data-addphoto="'+file.name.replace(/"/g,'&quot;')+'">Add</button>';
-      prev.appendChild(div)};reader.readAsDataURL(file)});
-}
-// Event delegation for addPhoto buttons
-document.addEventListener('click',function(e){var el=e.target.closest('[data-addphoto]');if(el){addPhoto(el,el.dataset.addphoto);}});
-function addPhoto(btn,filename){
-  const species=btn.parentElement.querySelector('.upload-species').value.trim();
-  if(!species){showToast('Enter a species name');return}
-  localData.photo_log.push({filename,species,status:'identified',date:new Date().toISOString().substring(0,19).replace('T',' '),lat:null,lng:null});
-  rebuildAllFromLog();renderAll();pushToFirestore();btn.parentElement.remove();showToast(species+' added!');
-}
+// ===== SEARCH (safe — only attach if element exists) =====
+(function(){
+  var ss=document.getElementById('speciesSearch');if(ss)ss.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.species-card').forEach(el=>{el.style.display=(el.dataset.species||'').includes(q)?'':'none'})});
+  var gs=document.getElementById('gallerySearch');if(gs)gs.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.gallery-item').forEach(el=>{el.style.display=(el.dataset.species||'').includes(q)?'':'none'})});
+  var ls=document.getElementById('logSearch');if(ls)ls.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#logBody tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none'})});
+})();
 
 // ===== TOAST =====
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>{t.style.display='none'},3000)}
